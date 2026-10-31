@@ -9,7 +9,7 @@ from threading import Thread
 import sqlite3
 
 # ==========================================
-# 1. إعدادات السيرفر والتنشيط التلقائي
+# 1. إعدادات السيرفر والتنشيط
 # ==========================================
 app = Flask('')
 @app.route('/')
@@ -22,9 +22,8 @@ def self_ping():
             time.sleep(60)
             url = "https://forge-bot-8m1e.onrender.com" 
             urllib.request.urlopen(url, timeout=10)
-            print("تم التنشيط بنجاح!")
-        except Exception as e:
-            print(f"فشل التنشيط: {e}")
+        except Exception:
+            pass
 
 def keep_alive():
     t = Thread(target=run)
@@ -32,10 +31,11 @@ def keep_alive():
     Thread(target=self_ping, daemon=True).start()
 
 # ==========================================
-# 2. إعدادات البوت
+# 2. إعدادات البوت والقناة
 # ==========================================
 BOT_TOKEN = "9299875540:AAGklBiqDgoiqsMoKtQjxomSGo4WRL8rDQM" 
 ADMIN_ID = 7118133252  
+CHANNEL_USERNAME = "@gsishshsshd"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -67,7 +67,7 @@ def get_users_count():
     return count
 
 # ==========================================
-# 4. المنتجات الجديدة (مرتبة)
+# 4. المنتجات
 # ==========================================
 PRODUCTS = {
     "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر"},
@@ -80,57 +80,79 @@ PRODUCTS = {
     "whatsapp_sa": {"name": "رقم واتساب السعودية 🇸🇦", "price": 1.00, "stock": "متوفر 10"},
 }
 
-user_selections = {}
+# ==========================================
+# 5. التحقق من الاشتراك
+# ==========================================
+def check_subscription(user_id):
+    try:
+        member = bot.get_chat_member(CHANNEL_USERNAME, user_id)
+        if member.status in ['member', 'administrator', 'creator']:
+            return True
+        return False
+    except Exception:
+        return False
 
 # ==========================================
-# 5. أوامر البوت
+# 6. أوامر البوت
 # ==========================================
 @bot.message_handler(commands=['start'])
 def send_welcome(message):
-    add_user(message.from_user.id, message.from_user.username, message.from_user.first_name)
+    user_id = message.from_user.id
+    add_user(user_id, message.from_user.username, message.from_user.first_name)
     
+    if not check_subscription(user_id):
+        markup = types.InlineKeyboardMarkup()
+        markup.add(types.InlineKeyboardButton("📢 اشترك في القناة أولاً", url=f"https://t.me/{CHANNEL_USERNAME[1:]}"))
+        markup.add(types.InlineKeyboardButton("✅ تحقق من الاشتراك", callback_data="check_sub"))
+        bot.reply_to(message, "عشان تستخدم البوت والمتجر، لازم تشترك في قناتنا أولاً:", reply_markup=markup)
+        return
+
+    show_products(message.chat.id)
+
+def show_products(chat_id):
     markup = types.InlineKeyboardMarkup()
     for key, prod in PRODUCTS.items():
-        # الترتيب هنا: الاسم — السعر $ (المتوفر)
         text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
         markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
     
-    bot.reply_to(message, "اختر المنتج اللي تبيه:", reply_markup=markup)
+    bot.send_message(chat_id, "اختر المنتج اللي تبيه:", reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "check_sub")
+def handle_check_sub(call):
+    if check_subscription(call.from_user.id):
+        bot.answer_callback_query(call.id, "✅ تم التحقق بنجاح!")
+        bot.delete_message(call.message.chat.id, call.message.message_id)
+        show_products(call.message.chat.id)
+    else:
+        bot.answer_callback_query(call.id, "❌ أنت لم تشترك في القناة بعد!", show_alert=True)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('buy:'))
+def handle_buy(call):
+    product_key = call.data.split(":")[1]
+    product = PRODUCTS.get(product_key)
+    
+    if not product:
+        return
+        
+    bot.answer_callback_query(call.id)
+    bot.send_message(
+        call.message.chat.id, 
+        f"اخترت: {product['name']}\nالسعر: {product['price']}$\n\n"
+        "لإتمام الطلب، تواصل مع المالك مباشرة على تيليجرام:\n"
+        "👤 @Hanialakhali\n\n"
+        "بعد الاتفاق والدفع، اطلب منه يفعّل طلبك."
+    )
 
 @bot.message_handler(commands=['stats'])
 def show_stats(message):
-    if message.from_user.id == ADMIN_ID:
+    if str(message.from_user.id) == str(ADMIN_ID):
         count = get_users_count()
         bot.reply_to(message, f"📊 عدد المستخدمين الكلي للبوت: {count}")
     else:
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
 
-@bot.callback_query_handler(func=lambda call: call.data.startswith('buy:'))
-def handle_buy(call):
-    try:
-        product_key = call.data.split(":")[1]
-        product = PRODUCTS.get(product_key)
-        
-        if not product:
-            bot.answer_callback_query(call.id, "المنتج غير موجود.", show_alert=True)
-            return
-        
-        user_selections[call.from_user.id] = product_key
-        bot.answer_callback_query(call.id)
-        
-        bot.send_message(
-            call.message.chat.id, 
-            f"اخترت: {product['name']}\nالسعر: {product['price']}$\n\n"
-            "لإتمام الطلب، تواصل مع المالك مباشرة على تيليجرام:\n"
-            "👤 @Hanialakhali\n\n"
-            "بعد الاتفاق والدفع، اطلب منه يفعّل طلبك.",
-            parse_mode="Markdown"
-        )
-    except Exception as e:
-        print(f"خطأ في اختيار المنتج: {e}")
-
 # ==========================================
-# 6. التشغيل
+# 7. التشغيل
 # ==========================================
 if __name__ == "__main__":
     init_db()
