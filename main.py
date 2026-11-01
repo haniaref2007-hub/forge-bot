@@ -70,10 +70,6 @@ def get_users_count():
 # 4. المنتجات
 # ==========================================
 PRODUCTS = {
-    "tg_0.50": {"name": "حساب تليجرام (0.50$)", "price": 0.50, "stock": "متوفر 10"},
-    "tg_1": {"name": "حساب تليجرام (1$)", "price": 1.00, "stock": "متوفر 10"},
-    "tg_2": {"name": "حساب تليجرام (2$)", "price": 2.00, "stock": "متوفر 10"},
-    "tg_3": {"name": "حساب تليجرام (3$)", "price": 3.00, "stock": "متوفر 10"},
     "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر"},
     "stars_50": {"name": "نجوم تليجرام 50 ⭐", "price": 1.20, "stock": "متوفر 5"},
     "stars_75": {"name": "نجوم تليجرام 75 ⭐", "price": 1.70, "stock": "متوفر 5"},
@@ -119,10 +115,7 @@ def show_products(chat_id):
         text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
         markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
     
-    # إضافة زر التبادل (ببجي / بيس)
-    markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
-    
-    bot.send_message(chat_id, "اختر المنتج اللي تبيه، أو اختر التبادل:", reply_markup=markup)
+    bot.send_message(chat_id, "اختر المنتج اللي تبيه:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def handle_check_sub(call):
@@ -148,18 +141,6 @@ def handle_buy(call):
         "لإتمام الطلب، تواصل مع المالك مباشرة على تيليجرام:\n"
         "👤 @Hanialakhali\n\n"
         "بعد الاتفاق والدفع، اطلب منه يفعّل طلبك."
-    )
-
-@bot.callback_query_handler(func=lambda call: call.data == "trade")
-def handle_trade(call):
-    bot.answer_callback_query(call.id)
-    bot.send_message(
-        call.message.chat.id,
-        "🔄 **قسم التبادل**\n\n"
-        "تقدر تبدل أي منتج من منتجاتنا مقابل حساب ببجي (PUBG) أو فري فاير (Free Fire).\n\n"
-        "للتفاهم والتبادل، تواصل مع المالك مباشرة:\n"
-        "👤 @Hanialakhali",
-        parse_mode="Markdown"
     )
 
 @bot.message_handler(commands=['stats'])
