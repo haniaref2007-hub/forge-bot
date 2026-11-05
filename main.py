@@ -66,6 +66,15 @@ def get_users_count():
     conn.close()
     return count
 
+# دالة لجلب كل الآيديهات عشان نرسل لهم الإشعارات
+def get_all_users():
+    conn = sqlite3.connect('users.db')
+    c = conn.cursor()
+    c.execute("SELECT user_id FROM users")
+    users = c.fetchall()
+    conn.close()
+    return [user[0] for user in users]
+
 # ==========================================
 # 4. المنتجات
 # ==========================================
@@ -87,7 +96,7 @@ PRODUCTS = {
     "tiktok_1k": {"name": "حساب تيك توك (1017 متابع)", "price": 3.00, "stock": "متوفر 1"},
     "insta_1200": {"name": "حساب انستجرام (1200 متابع)", "price": 4.00, "stock": "متوفر 1"},
     
-    # أرقام جديدة
+    # أرقام
     "tg_ma": {"name": "رقم تليجرام المغرب 🇲🇦", "price": 0.70, "stock": "متوفر 1"},
     "wa_ye": {"name": "رقم واتساب اليمن 🇾🇪", "price": 1.00, "stock": "متوفر كمية"},
     "wa_us": {"name": "رقم واتساب أمريكا 🇺🇸", "price": 0.75, "stock": "متوفر كمية"},
@@ -132,7 +141,6 @@ def show_products(chat_id):
         text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
         markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
     
-    # إضافة زر التبادل (ببجي / بيس) في القائمة الرئيسية
     markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
     
     bot.send_message(chat_id, "اختر المنتج اللي تبيه، أو اختر التبادل:", reply_markup=markup)
@@ -156,7 +164,6 @@ def handle_buy(call):
         
     bot.answer_callback_query(call.id)
     
-    # إنشاء أزرار للشراء أو التبادل لكل منتج
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("💵 شراء (تواصل مع المالك)", callback_data="contact_owner"))
     markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
@@ -177,7 +184,6 @@ def handle_contact_owner(call):
         "👤 @Hanialakhali"
     )
 
-# قائمة التبادل (ببجي / بيس)
 @bot.callback_query_handler(func=lambda call: call.data == "trade")
 def handle_trade(call):
     markup = types.InlineKeyboardMarkup()
@@ -218,7 +224,40 @@ def show_stats(message):
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
 
 # ==========================================
-# 7. التشغيل
+# 7. أمر الإشعارات (Broadcast)
+# ==========================================
+@bot.message_handler(commands=['broadcast'])
+def broadcast(message):
+    # نتأكد إن اللي يرسل الأمر هو الأدمن
+    if str(message.from_user.id) != str(ADMIN_ID):
+        bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
+        return
+
+    # نطلب من الأدمن يكتب الرسالة اللي يبي يرسلها
+    msg = bot.reply_to(message, "✍️ اكتب الرسالة اللي تبغى ترسلها لكل المستخدمين:")
+    bot.register_next_step_handler(msg, send_broadcast)
+
+def send_broadcast(message):
+    text = message.text
+    users = get_all_users()
+    
+    bot.reply_to(message, f"⏳ جاري إرسال الإشعار لـ {len(users)} مستخدم...")
+    
+    success = 0
+    failed = 0
+    
+    for user_id in users:
+        try:
+            bot.send_message(user_id, f"📢 **إشعار من المتجر:**\n\n{text}", parse_mode="Markdown")
+            success += 1
+            time.sleep(0.05) # تأخير بسيط عشان ما يحظرنا تيليجرام
+        except Exception:
+            failed += 1
+            
+    bot.reply_to(message, f"✅ تم إرسال الإشعار لـ {success} مستخدم.\n❌ فشل الإرسال لـ {failed} مستخدم (ممكن يكونون حاظرين البوت).")
+
+# ==========================================
+# 8. التشغيل
 # ==========================================
 if __name__ == "__main__":
     init_db()
