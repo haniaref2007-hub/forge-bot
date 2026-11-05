@@ -70,14 +70,31 @@ def get_users_count():
 # 4. المنتجات
 # ==========================================
 PRODUCTS = {
+    # حسابات تليجرام
+    "tg_0.50": {"name": "حساب تليجرام", "price": 0.50, "stock": "متوفر 10"},
+    "tg_1": {"name": "حساب تليجرام", "price": 1.00, "stock": "متوفر 10"},
+    "tg_2": {"name": "حساب تليجرام", "price": 2.00, "stock": "متوفر 10"},
+    "tg_3": {"name": "حساب تليجرام", "price": 3.00, "stock": "متوفر 10"},
+    
+    # فيزا ونجوم
     "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر"},
     "stars_50": {"name": "نجوم تليجرام 50 ⭐", "price": 1.20, "stock": "متوفر 5"},
     "stars_75": {"name": "نجوم تليجرام 75 ⭐", "price": 1.70, "stock": "متوفر 5"},
     "stars_100": {"name": "نجوم تليجرام 100 ⭐", "price": 2.35, "stock": "متوفر 5"},
+    
+    # حسابات سوشيال ميديا
     "tiktok_2k": {"name": "حساب تيك توك (2.8k متابع)", "price": 7.00, "stock": "متوفر 1"},
     "tiktok_1k": {"name": "حساب تيك توك (1017 متابع)", "price": 3.00, "stock": "متوفر 1"},
     "insta_1200": {"name": "حساب انستجرام (1200 متابع)", "price": 4.00, "stock": "متوفر 1"},
-    "whatsapp_sa": {"name": "رقم واتساب السعودية 🇸🇦", "price": 1.00, "stock": "متوفر 10"},
+    
+    # أرقام جديدة
+    "tg_ma": {"name": "رقم تليجرام المغرب 🇲🇦", "price": 0.70, "stock": "متوفر 1"},
+    "wa_ye": {"name": "رقم واتساب اليمن 🇾🇪", "price": 1.00, "stock": "متوفر كمية"},
+    "wa_us": {"name": "رقم واتساب أمريكا 🇺🇸", "price": 0.75, "stock": "متوفر كمية"},
+    "wa_eg": {"name": "رقم واتساب مصر 🇪🇬", "price": 0.90, "stock": "متوفر كمية"},
+    "wa_jo": {"name": "رقم واتساب الأردن 🇯🇴", "price": 1.00, "stock": "متوفر كمية"},
+    "wa_iq": {"name": "رقم واتساب العراق 🇮🇶", "price": 1.00, "stock": "متوفر كمية"},
+    "wa_rand": {"name": "رقم واتساب عشوائي", "price": 0.70, "stock": "متوفر كمية"},
 }
 
 # ==========================================
@@ -115,7 +132,10 @@ def show_products(chat_id):
         text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
         markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
     
-    bot.send_message(chat_id, "اختر المنتج اللي تبيه:", reply_markup=markup)
+    # إضافة زر التبادل (ببجي / بيس) في القائمة الرئيسية
+    markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
+    
+    bot.send_message(chat_id, "اختر المنتج اللي تبيه، أو اختر التبادل:", reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def handle_check_sub(call):
@@ -135,12 +155,58 @@ def handle_buy(call):
         return
         
     bot.answer_callback_query(call.id)
+    
+    # إنشاء أزرار للشراء أو التبادل لكل منتج
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("💵 شراء (تواصل مع المالك)", callback_data="contact_owner"))
+    markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
+    
     bot.send_message(
         call.message.chat.id, 
         f"اخترت: {product['name']}\nالسعر: {product['price']}$\n\n"
+        "هل تبغى تشتري هذا المنتج، أو تتبادله؟",
+        reply_markup=markup
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == "contact_owner")
+def handle_contact_owner(call):
+    bot.answer_callback_query(call.id)
+    bot.send_message(
+        call.message.chat.id,
         "لإتمام الطلب، تواصل مع المالك مباشرة على تيليجرام:\n"
-        "👤 @Hanialakhali\n\n"
-        "بعد الاتفاق والدفع، اطلب منه يفعّل طلبك."
+        "👤 @Hanialakhali"
+    )
+
+# قائمة التبادل (ببجي / بيس)
+@bot.callback_query_handler(func=lambda call: call.data == "trade")
+def handle_trade(call):
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("🎮 ببجي (PUBG)", callback_data="trade_pubg"))
+    markup.add(types.InlineKeyboardButton("⚽ بيس (PES)", callback_data="trade_pes"))
+    bot.edit_message_text("اختر اللعبة اللي تبغى تتبادل مقابلها:", call.message.chat.id, call.message.message_id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "trade_pubg")
+def handle_trade_pubg(call):
+    bot.answer_callback_query(call.id)
+    bot.send_message(
+        call.message.chat.id,
+        "🎮 **تبادل ببجي (PUBG)**\n\n"
+        "تقدر تبدل أي منتج من منتجاتنا مقابل حساب ببجي.\n\n"
+        "للتفاهم، تواصل مع المالك مباشرة:\n"
+        "👤 @Hanialakhali",
+        parse_mode="Markdown"
+    )
+
+@bot.callback_query_handler(func=lambda call: call.data == "trade_pes")
+def handle_trade_pes(call):
+    bot.answer_callback_query(call.id)
+    bot.send_message(
+        call.message.chat.id,
+        "⚽ **تبادل بيس (PES)**\n\n"
+        "تقدر تبدل أي منتج من منتجاتنا مقابل حساب بيس.\n\n"
+        "للتفاهم، تواصل مع المالك مباشرة:\n"
+        "👤 @Hanialakhali",
+        parse_mode="Markdown"
     )
 
 @bot.message_handler(commands=['stats'])
