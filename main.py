@@ -6,7 +6,7 @@ import threading
 import urllib.request
 from flask import Flask
 from threading import Thread
-import sqlite3
+import psycopg2
 
 # ==========================================
 # 1. إعدادات السيرفر والتنشيط
@@ -37,73 +37,90 @@ BOT_TOKEN = "9299875540:AAGklBiqDgoiqsMoKtQjxomSGo4WRL8rDQM"
 ADMIN_ID = 7118133252  
 CHANNEL_USERNAME = "@gsishshsshd"
 
+DATABASE_URL = "postgresql://postgres:qetuoadgjl2007@db.fjuvxbwnhdwikzsajboa.supabase.co:5432/postgres"
+
 bot = telebot.TeleBot(BOT_TOKEN)
 
 # ==========================================
-# 3. قاعدة البيانات
+# 3. قاعدة البيانات (Supabase)
 # ==========================================
+def get_db_connection():
+    return psycopg2.connect(DATABASE_URL, sslmode='require')
+
 def init_db():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute('''CREATE TABLE IF NOT EXISTS users
-                 (user_id INTEGER PRIMARY KEY, username TEXT, first_name TEXT, joined_at TEXT)''')
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute('''CREATE TABLE IF NOT EXISTS users
+                     (user_id BIGINT PRIMARY KEY, username TEXT, first_name TEXT, joined_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP)''')
+        conn.commit()
+        conn.close()
+        print("✅ تم الاتصال بقاعدة البيانات بنجاح!")
+    except Exception as e:
+        print(f"❌ خطأ في قاعدة البيانات: {e}")
 
 def add_user(user_id, username, first_name):
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("INSERT OR IGNORE INTO users (user_id, username, first_name, joined_at) VALUES (?, ?, ?, datetime('now'))", 
-              (user_id, username, first_name))
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("INSERT INTO users (user_id, username, first_name) VALUES (%s, %s, %s) ON CONFLICT (user_id) DO NOTHING", 
+                  (user_id, username, first_name))
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"خطأ في إضافة المستخدم: {e}")
 
 def get_users_count():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("SELECT COUNT(*) FROM users")
-    count = c.fetchone()[0]
-    conn.close()
-    return count
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT COUNT(*) FROM users")
+        count = c.fetchone()[0]
+        conn.close()
+        return count
+    except Exception:
+        return 0
 
-# دالة لجلب كل الآيديهات عشان نرسل لهم الإشعارات
 def get_all_users():
-    conn = sqlite3.connect('users.db')
-    c = conn.cursor()
-    c.execute("SELECT user_id FROM users")
-    users = c.fetchall()
-    conn.close()
-    return [user[0] for user in users]
+    try:
+        conn = get_db_connection()
+        c = conn.cursor()
+        c.execute("SELECT user_id FROM users")
+        users = c.fetchall()
+        conn.close()
+        return [user[0] for user in users]
+    except Exception:
+        return []
 
 # ==========================================
-# 4. المنتجات
+# 4. المنتجات (مقسمة لأقسام)
 # ==========================================
 PRODUCTS = {
-    # حسابات تليجرام
-    "tg_0.50": {"name": "حساب تليجرام", "price": 0.50, "stock": "متوفر 10"},
-    "tg_1": {"name": "حساب تليجرام", "price": 1.00, "stock": "متوفر 10"},
-    "tg_2": {"name": "حساب تليجرام", "price": 2.00, "stock": "متوفر 10"},
-    "tg_3": {"name": "حساب تليجرام", "price": 3.00, "stock": "متوفر 10"},
+    # قسم التليجرام
+    "tg_0.50": {"name": "حساب تليجرام", "price": 0.50, "stock": "متوفر 10", "category": "telegram"},
+    "tg_1": {"name": "حساب تليجرام", "price": 1.00, "stock": "متوفر 10", "category": "telegram"},
+    "tg_2": {"name": "حساب تليجرام", "price": 2.00, "stock": "متوفر 10", "category": "telegram"},
+    "tg_3": {"name": "حساب تليجرام", "price": 3.00, "stock": "متوفر 10", "category": "telegram"},
+    "tg_ma": {"name": "رقم تليجرام المغرب 🇲🇦", "price": 0.70, "stock": "متوفر 1", "category": "telegram"},
     
-    # فيزا ونجوم
-    "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر"},
-    "stars_50": {"name": "نجوم تليجرام 50 ⭐", "price": 1.20, "stock": "متوفر 5"},
-    "stars_75": {"name": "نجوم تليجرام 75 ⭐", "price": 1.70, "stock": "متوفر 5"},
-    "stars_100": {"name": "نجوم تليجرام 100 ⭐", "price": 2.35, "stock": "متوفر 5"},
+    # قسم الواتساب
+    "wa_ye": {"name": "رقم واتساب اليمن 🇾🇪", "price": 1.00, "stock": "متوفر كمية", "category": "whatsapp"},
+    "wa_us": {"name": "رقم واتساب أمريكا 🇺🇸", "price": 0.75, "stock": "متوفر كمية", "category": "whatsapp"},
+    "wa_eg": {"name": "رقم واتساب مصر 🇪🇬", "price": 0.90, "stock": "متوفر كمية", "category": "whatsapp"},
+    "wa_jo": {"name": "رقم واتساب الأردن 🇯🇴", "price": 1.00, "stock": "متوفر كمية", "category": "whatsapp"},
+    "wa_iq": {"name": "رقم واتساب العراق 🇮🇶", "price": 1.00, "stock": "متوفر كمية", "category": "whatsapp"},
+    "wa_rand": {"name": "رقم واتساب عشوائي", "price": 0.70, "stock": "متوفر كمية", "category": "whatsapp"},
     
-    # حسابات سوشيال ميديا
-    "tiktok_2k": {"name": "حساب تيك توك (2.8k متابع)", "price": 7.00, "stock": "متوفر 1"},
-    "tiktok_1k": {"name": "حساب تيك توك (1017 متابع)", "price": 3.00, "stock": "متوفر 1"},
-    "insta_1200": {"name": "حساب انستجرام (1200 متابع)", "price": 4.00, "stock": "متوفر 1"},
+    # قسم النجوم
+    "stars_50": {"name": "نجوم تليجرام 50 ⭐", "price": 1.20, "stock": "متوفر 5", "category": "stars"},
+    "stars_75": {"name": "نجوم تليجرام 75 ⭐", "price": 1.70, "stock": "متوفر 5", "category": "stars"},
+    "stars_100": {"name": "نجوم تليجرام 100 ⭐", "price": 2.35, "stock": "متوفر 5", "category": "stars"},
     
-    # أرقام
-    "tg_ma": {"name": "رقم تليجرام المغرب 🇲🇦", "price": 0.70, "stock": "متوفر 1"},
-    "wa_ye": {"name": "رقم واتساب اليمن 🇾🇪", "price": 1.00, "stock": "متوفر كمية"},
-    "wa_us": {"name": "رقم واتساب أمريكا 🇺🇸", "price": 0.75, "stock": "متوفر كمية"},
-    "wa_eg": {"name": "رقم واتساب مصر 🇪🇬", "price": 0.90, "stock": "متوفر كمية"},
-    "wa_jo": {"name": "رقم واتساب الأردن 🇯🇴", "price": 1.00, "stock": "متوفر كمية"},
-    "wa_iq": {"name": "رقم واتساب العراق 🇮🇶", "price": 1.00, "stock": "متوفر كمية"},
-    "wa_rand": {"name": "رقم واتساب عشوائي", "price": 0.70, "stock": "متوفر كمية"},
+    # منتجات أخرى
+    "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر", "category": "other"},
+    "tiktok_2k": {"name": "حساب تيك توك (2.8k متابع)", "price": 7.00, "stock": "متوفر 1", "category": "other"},
+    "tiktok_1k": {"name": "حساب تيك توك (1017 متابع)", "price": 3.00, "stock": "متوفر 1", "category": "other"},
+    "insta_1200": {"name": "حساب انستجرام (1200 متابع)", "price": 4.00, "stock": "متوفر 1", "category": "other"},
 }
 
 # ==========================================
@@ -133,24 +150,56 @@ def send_welcome(message):
         bot.reply_to(message, "عشان تستخدم البوت والمتجر، لازم تشترك في قناتنا أولاً:", reply_markup=markup)
         return
 
-    show_products(message.chat.id)
+    show_main_menu(message.chat.id)
 
-def show_products(chat_id):
-    markup = types.InlineKeyboardMarkup()
-    for key, prod in PRODUCTS.items():
-        text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
-        markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
+# القائمة الرئيسية (الأقسام)
+def show_main_menu(chat_id):
+    markup = types.InlineKeyboardMarkup(row_width=2)
     
+    # أزرار الأقسام (مع إيموجي ملون)
+    markup.add(
+        types.InlineKeyboardButton("🟢 أرقام واتساب", callback_data="cat_whatsapp"),
+        types.InlineKeyboardButton("🔵 حسابات تليجرام", callback_data="cat_telegram")
+    )
+    markup.add(
+        types.InlineKeyboardButton("⭐ نجوم تليجرام", callback_data="cat_stars"),
+        types.InlineKeyboardButton("🛒 منتجات أخرى", callback_data="cat_other")
+    )
+    
+    # زر التبادل
     markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
     
-    bot.send_message(chat_id, "اختر المنتج اللي تبيه، أو اختر التبادل:", reply_markup=markup)
+    bot.send_message(chat_id, "أهلاً بك في المتجر! اختر القسم اللي تبيه:", reply_markup=markup)
+
+# عرض منتجات القسم
+def show_category(chat_id, message_id, category):
+    markup = types.InlineKeyboardMarkup()
+    
+    for key, prod in PRODUCTS.items():
+        if prod["category"] == category:
+            text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
+            markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
+            
+    markup.add(types.InlineKeyboardButton("🔙 رجوع للأقسام", callback_data="back_main"))
+    
+    bot.edit_message_text("اختر المنتج اللي تبيه:", chat_id, message_id, reply_markup=markup)
+
+@bot.callback_query_handler(func=lambda call: call.data == "back_main")
+def handle_back_main(call):
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+    show_main_menu(call.message.chat.id)
+
+@bot.callback_query_handler(func=lambda call: call.data.startswith('cat_'))
+def handle_category(call):
+    category = call.data.split("_")[1]
+    show_category(call.message.chat.id, call.message.message_id, category)
 
 @bot.callback_query_handler(func=lambda call: call.data == "check_sub")
 def handle_check_sub(call):
     if check_subscription(call.from_user.id):
         bot.answer_callback_query(call.id, "✅ تم التحقق بنجاح!")
         bot.delete_message(call.message.chat.id, call.message.message_id)
-        show_products(call.message.chat.id)
+        show_main_menu(call.message.chat.id)
     else:
         bot.answer_callback_query(call.id, "❌ أنت لم تشترك في القناة بعد!", show_alert=True)
 
@@ -223,17 +272,12 @@ def show_stats(message):
     else:
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
 
-# ==========================================
-# 7. أمر الإشعارات (Broadcast)
-# ==========================================
 @bot.message_handler(commands=['broadcast'])
 def broadcast(message):
-    # نتأكد إن اللي يرسل الأمر هو الأدمن
     if str(message.from_user.id) != str(ADMIN_ID):
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
         return
 
-    # نطلب من الأدمن يكتب الرسالة اللي يبي يرسلها
     msg = bot.reply_to(message, "✍️ اكتب الرسالة اللي تبغى ترسلها لكل المستخدمين:")
     bot.register_next_step_handler(msg, send_broadcast)
 
@@ -250,14 +294,14 @@ def send_broadcast(message):
         try:
             bot.send_message(user_id, f"📢 **إشعار من المتجر:**\n\n{text}", parse_mode="Markdown")
             success += 1
-            time.sleep(0.05) # تأخير بسيط عشان ما يحظرنا تيليجرام
+            time.sleep(0.05) 
         except Exception:
             failed += 1
             
-    bot.reply_to(message, f"✅ تم إرسال الإشعار لـ {success} مستخدم.\n❌ فشل الإرسال لـ {failed} مستخدم (ممكن يكونون حاظرين البوت).")
+    bot.reply_to(message, f"✅ تم إرسال الإشعار لـ {success} مستخدم.\n❌ فشل الإرسال لـ {failed} مستخدم.")
 
 # ==========================================
-# 8. التشغيل
+# 7. التشغيل
 # ==========================================
 if __name__ == "__main__":
     init_db()
