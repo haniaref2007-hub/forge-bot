@@ -37,7 +37,8 @@ BOT_TOKEN = "9299875540:AAGklBiqDgoiqsMoKtQjxomSGo4WRL8rDQM"
 ADMIN_ID = 7118133252  
 CHANNEL_USERNAME = "@gsishshsshd"
 
-DATABASE_URL = "postgresql://postgres:qetuoadgjl2007@db.fjuvxbwnhdwikzsajboa.supabase.co:5432/postgres"
+# هنا رابط Pooler مع الباسورد حقك
+DATABASE_URL = "postgresql://postgres.fjuvxbwnhdwikzsajboa:qetuoadgjl2007@aws-0-ap-northeast-1.pooler.supabase.com:6543/postgres"
 
 bot = telebot.TeleBot(BOT_TOKEN)
 
@@ -93,17 +94,15 @@ def get_all_users():
         return []
 
 # ==========================================
-# 4. المنتجات (مقسمة لأقسام)
+# 4. المنتجات
 # ==========================================
 PRODUCTS = {
-    # قسم التليجرام
     "tg_0.50": {"name": "حساب تليجرام", "price": 0.50, "stock": "متوفر 10", "category": "telegram"},
     "tg_1": {"name": "حساب تليجرام", "price": 1.00, "stock": "متوفر 10", "category": "telegram"},
     "tg_2": {"name": "حساب تليجرام", "price": 2.00, "stock": "متوفر 10", "category": "telegram"},
     "tg_3": {"name": "حساب تليجرام", "price": 3.00, "stock": "متوفر 10", "category": "telegram"},
     "tg_ma": {"name": "رقم تليجرام المغرب 🇲🇦", "price": 0.70, "stock": "متوفر 1", "category": "telegram"},
     
-    # قسم الواتساب
     "wa_ye": {"name": "رقم واتساب اليمن 🇾🇪", "price": 1.00, "stock": "متوفر كمية", "category": "whatsapp"},
     "wa_us": {"name": "رقم واتساب أمريكا 🇺🇸", "price": 0.75, "stock": "متوفر كمية", "category": "whatsapp"},
     "wa_eg": {"name": "رقم واتساب مصر 🇪🇬", "price": 0.90, "stock": "متوفر كمية", "category": "whatsapp"},
@@ -111,12 +110,10 @@ PRODUCTS = {
     "wa_iq": {"name": "رقم واتساب العراق 🇮🇶", "price": 1.00, "stock": "متوفر كمية", "category": "whatsapp"},
     "wa_rand": {"name": "رقم واتساب عشوائي", "price": 0.70, "stock": "متوفر كمية", "category": "whatsapp"},
     
-    # قسم النجوم
     "stars_50": {"name": "نجوم تليجرام 50 ⭐", "price": 1.20, "stock": "متوفر 5", "category": "stars"},
     "stars_75": {"name": "نجوم تليجرام 75 ⭐", "price": 1.70, "stock": "متوفر 5", "category": "stars"},
     "stars_100": {"name": "نجوم تليجرام 100 ⭐", "price": 2.35, "stock": "متوفر 5", "category": "stars"},
     
-    # منتجات أخرى
     "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر", "category": "other"},
     "tiktok_2k": {"name": "حساب تيك توك (2.8k متابع)", "price": 7.00, "stock": "متوفر 1", "category": "other"},
     "tiktok_1k": {"name": "حساب تيك توك (1017 متابع)", "price": 3.00, "stock": "متوفر 1", "category": "other"},
@@ -152,11 +149,8 @@ def send_welcome(message):
 
     show_main_menu(message.chat.id)
 
-# القائمة الرئيسية (الأقسام)
 def show_main_menu(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=2)
-    
-    # أزرار الأقسام (مع إيموجي ملون)
     markup.add(
         types.InlineKeyboardButton("🟢 أرقام واتساب", callback_data="cat_whatsapp"),
         types.InlineKeyboardButton("🔵 حسابات تليجرام", callback_data="cat_telegram")
@@ -165,23 +159,16 @@ def show_main_menu(chat_id):
         types.InlineKeyboardButton("⭐ نجوم تليجرام", callback_data="cat_stars"),
         types.InlineKeyboardButton("🛒 منتجات أخرى", callback_data="cat_other")
     )
-    
-    # زر التبادل
     markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
-    
     bot.send_message(chat_id, "أهلاً بك في المتجر! اختر القسم اللي تبيه:", reply_markup=markup)
 
-# عرض منتجات القسم
 def show_category(chat_id, message_id, category):
     markup = types.InlineKeyboardMarkup()
-    
     for key, prod in PRODUCTS.items():
         if prod["category"] == category:
             text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
             markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
-            
     markup.add(types.InlineKeyboardButton("🔙 رجوع للأقسام", callback_data="back_main"))
-    
     bot.edit_message_text("اختر المنتج اللي تبيه:", chat_id, message_id, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == "back_main")
@@ -207,16 +194,12 @@ def handle_check_sub(call):
 def handle_buy(call):
     product_key = call.data.split(":")[1]
     product = PRODUCTS.get(product_key)
-    
     if not product:
         return
-        
     bot.answer_callback_query(call.id)
-    
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("💵 شراء (تواصل مع المالك)", callback_data="contact_owner"))
     markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
-    
     bot.send_message(
         call.message.chat.id, 
         f"اخترت: {product['name']}\nالسعر: {product['price']}$\n\n"
@@ -227,11 +210,7 @@ def handle_buy(call):
 @bot.callback_query_handler(func=lambda call: call.data == "contact_owner")
 def handle_contact_owner(call):
     bot.answer_callback_query(call.id)
-    bot.send_message(
-        call.message.chat.id,
-        "لإتمام الطلب، تواصل مع المالك مباشرة على تيليجرام:\n"
-        "👤 @Hanialakhali"
-    )
+    bot.send_message(call.message.chat.id, "لإتمام الطلب، تواصل مع المالك مباشرة على تيليجرام:\n👤 @Hanialakhali")
 
 @bot.callback_query_handler(func=lambda call: call.data == "trade")
 def handle_trade(call):
@@ -243,26 +222,12 @@ def handle_trade(call):
 @bot.callback_query_handler(func=lambda call: call.data == "trade_pubg")
 def handle_trade_pubg(call):
     bot.answer_callback_query(call.id)
-    bot.send_message(
-        call.message.chat.id,
-        "🎮 **تبادل ببجي (PUBG)**\n\n"
-        "تقدر تبدل أي منتج من منتجاتنا مقابل حساب ببجي.\n\n"
-        "للتفاهم، تواصل مع المالك مباشرة:\n"
-        "👤 @Hanialakhali",
-        parse_mode="Markdown"
-    )
+    bot.send_message(call.message.chat.id, "🎮 **تبادل ببجي (PUBG)**\n\nتقدر تبدل أي منتج من منتجاتنا مقابل حساب ببجي.\n\nللتفاهم، تواصل مع المالك مباشرة:\n👤 @Hanialakhali", parse_mode="Markdown")
 
 @bot.callback_query_handler(func=lambda call: call.data == "trade_pes")
 def handle_trade_pes(call):
     bot.answer_callback_query(call.id)
-    bot.send_message(
-        call.message.chat.id,
-        "⚽ **تبادل بيس (PES)**\n\n"
-        "تقدر تبدل أي منتج من منتجاتنا مقابل حساب بيس.\n\n"
-        "للتفاهم، تواصل مع المالك مباشرة:\n"
-        "👤 @Hanialakhali",
-        parse_mode="Markdown"
-    )
+    bot.send_message(call.message.chat.id, "⚽ **تبادل بيس (PES)**\n\nتقدر تبدل أي منتج من منتجاتنا مقابل حساب بيس.\n\nللتفاهم، تواصل مع المالك مباشرة:\n👤 @Hanialakhali", parse_mode="Markdown")
 
 @bot.message_handler(commands=['stats'])
 def show_stats(message):
@@ -277,19 +242,15 @@ def broadcast(message):
     if str(message.from_user.id) != str(ADMIN_ID):
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
         return
-
     msg = bot.reply_to(message, "✍️ اكتب الرسالة اللي تبغى ترسلها لكل المستخدمين:")
     bot.register_next_step_handler(msg, send_broadcast)
 
 def send_broadcast(message):
     text = message.text
     users = get_all_users()
-    
     bot.reply_to(message, f"⏳ جاري إرسال الإشعار لـ {len(users)} مستخدم...")
-    
     success = 0
     failed = 0
-    
     for user_id in users:
         try:
             bot.send_message(user_id, f"📢 **إشعار من المتجر:**\n\n{text}", parse_mode="Markdown")
@@ -297,7 +258,6 @@ def send_broadcast(message):
             time.sleep(0.05) 
         except Exception:
             failed += 1
-            
     bot.reply_to(message, f"✅ تم إرسال الإشعار لـ {success} مستخدم.\n❌ فشل الإرسال لـ {failed} مستخدم.")
 
 # ==========================================
