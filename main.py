@@ -222,17 +222,21 @@ def handle_trade_pes(call):
 @bot.message_handler(commands=['stats'])
 def show_stats(message):
     if str(message.from_user.id) == str(ADMIN_ID):
-        bot.reply_to(message, "⏳ جاري فحص المستخدمين النشطين...")
+        bot.reply_to(message, "⏳ جاري الفحص الدقيق للمستخدمين...")
         users = get_all_users()
         active_count = 0
+        
         for uid in users:
             try:
-                bot.get_chat(uid)
-                active_count += 1
+                # الفحص الدقيق: نسأل تيليجرام عن حالة المستخدم في البوت
+                chat_info = bot.get_chat_member(uid, uid)
+                if chat_info.status in ['member', 'administrator', 'creator']:
+                    active_count += 1
             except Exception:
+                # لو رجع خطأ، معناه حظر البوت أو حذف حسابه
                 pass
-        
-        bot.reply_to(message, f"📊 عدد المستخدمين النشطين (اللي يستخدمون البوت حالياً): {active_count}")
+                
+        bot.reply_to(message, f"📊 العدد الحقيقي (النشطين فقط): {active_count}")
     else:
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
 
