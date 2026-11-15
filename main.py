@@ -73,17 +73,6 @@ def add_user(user_id, username, first_name):
     except Exception as e:
         logging.error(f"add_user error: {e}")
 
-def get_users_count():
-    try:
-        conn = get_db_connection()
-        c = conn.cursor()
-        c.execute("SELECT COUNT(*) FROM users")
-        count = c.fetchone()[0]
-        conn.close()
-        return count
-    except Exception:
-        return 0
-
 def get_all_users():
     try:
         conn = get_db_connection()
@@ -233,8 +222,17 @@ def handle_trade_pes(call):
 @bot.message_handler(commands=['stats'])
 def show_stats(message):
     if str(message.from_user.id) == str(ADMIN_ID):
-        count = get_users_count()
-        bot.reply_to(message, f"📊 عدد المستخدمين الكلي للبوت: {count}")
+        bot.reply_to(message, "⏳ جاري فحص المستخدمين النشطين...")
+        users = get_all_users()
+        active_count = 0
+        for uid in users:
+            try:
+                bot.get_chat(uid)
+                active_count += 1
+            except Exception:
+                pass
+        
+        bot.reply_to(message, f"📊 عدد المستخدمين النشطين (اللي يستخدمون البوت حالياً): {active_count}")
     else:
         bot.reply_to(message, "هذا الأمر خاص بصاحب المتجر فقط.")
 
@@ -257,8 +255,9 @@ def send_broadcast(message):
             bot.send_message(user_id, f"📢 إشعار من المتجر:\n\n{text}")
             success += 1
             time.sleep(0.05)
-        except Exception:
+        except Exception as e:
             failed += 1
+            logging.warning(f"فشل الإرسال للمستخدم {user_id}: {e}")
     bot.reply_to(message, f"✅ تم إرسال الإشعار لـ {success} مستخدم.\n❌ فشل الإرسال لـ {failed} مستخدم.")
 
 # ==========================================
