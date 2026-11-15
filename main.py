@@ -117,7 +117,7 @@ PRODUCTS = {
     "stars_100": {"name": "نجوم تليجرام 100 ⭐", "price": 2.35, "stock": "متوفر 5", "category": "stars"},
 
     "visa_1": {"name": "بطاقة فيزا 1$", "price": 2.00, "stock": "متوفر", "category": "other"},
-    "tiktok_2k": {"name": "حساب تيك توك (2.8k متابع)", "price": 7.00, "stock": "متوفر 1", "category": "other"},
+    "tiktok_2k": {"name": "حساب تيك توك (3k متابع)", "price": 7.00, "stock": "متوفر 1", "category": "other"},
     "tiktok_1k": {"name": "حساب تيك توك (1017 متابع)", "price": 3.00, "stock": "متوفر 1", "category": "other"},
     "insta_1200": {"name": "حساب انستجرام (1200 متابع)", "price": 4.00, "stock": "متوفر 1", "category": "other"},
     "remote_format": {"name": "فرمتة الهاتف عن بعد", "price": 5.00, "stock": "متوفر", "category": "other"},
