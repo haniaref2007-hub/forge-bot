@@ -159,7 +159,7 @@ def show_main_menu(chat_id):
 def show_category(chat_id, message_id, category):
     markup = types.InlineKeyboardMarkup()
     
-    # قسم الرشق بالصور
+    # قسم الرشق
     if category == "rush":
         markup.add(types.InlineKeyboardButton("رشق تيك توك", callback_data="rush_tiktok"))
         markup.add(types.InlineKeyboardButton("رشق انستجرام", callback_data="rush_insta"))
@@ -219,7 +219,6 @@ def handle_buy(call):
 def handle_rush(call):
     platform = call.data.split('_')[1]
     
-    # روابط الصور
     rush_images = {
         "tiktok": "https://i.postimg.cc/V6kGbFGw/20261118-210921.jpg",
         "insta": "https://i.postimg.cc/FKHF1M4k/20261118-212111.jpg",
@@ -235,14 +234,18 @@ def handle_rush(call):
     
     bot.answer_callback_query(call.id)
     
-    # حذف رسالة الصورة السابقة لإرسال الصورة المحددة
+    # تجهيز زر الرجوع
+    markup = types.InlineKeyboardMarkup()
+    markup.add(types.InlineKeyboardButton("🔙 رجوع لقسم الرشق", callback_data="cat_rush"))
+    
+    # حذف الرسالة السابقة وإرسال الصورة المحددة
     bot.delete_message(call.message.chat.id, call.message.message_id)
     
-    # إرسال الصورة مع نص الطلب
     bot.send_photo(
         call.message.chat.id,
         rush_images.get(platform, rush_images["tiktok"]),
-        caption=f"اخترت: رشق {names.get(platform, platform)}\n\nلإتمام الطلب، تواصل مع المالك مباشرة:\n👤 @Hanialakhali"
+        caption=f"اخترت: رشق {names.get(platform, platform)}\n\nلإتمام الطلب، تواصل مع المالك مباشرة:\n👤 @Hanialakhali",
+        reply_markup=markup
     )
 
 @bot.callback_query_handler(func=lambda call: call.data == "contact_owner")
