@@ -143,6 +143,9 @@ def send_welcome(message):
 def show_main_menu(chat_id):
     markup = types.InlineKeyboardMarkup(row_width=2)
     markup.add(
+        types.InlineKeyboardButton("🚀 خدمات الرشق", callback_data="cat_rush")
+    )
+    markup.add(
         types.InlineKeyboardButton("🟢 أرقام واتساب", callback_data="cat_whatsapp"),
         types.InlineKeyboardButton("🔵 حسابات تليجرام", callback_data="cat_telegram")
     )
@@ -155,10 +158,24 @@ def show_main_menu(chat_id):
 
 def show_category(chat_id, message_id, category):
     markup = types.InlineKeyboardMarkup()
+    
+    # قسم الرشق بالصور
+    if category == "rush":
+        markup.add(types.InlineKeyboardButton("رشق تيك توك", callback_data="rush_tiktok"))
+        markup.add(types.InlineKeyboardButton("رشق انستجرام", callback_data="rush_insta"))
+        markup.add(types.InlineKeyboardButton("رشق واتساب", callback_data="rush_wa"))
+        markup.add(types.InlineKeyboardButton("رشق تليجرام", callback_data="rush_tg"))
+        markup.add(types.InlineKeyboardButton("رشق فيسبوك", callback_data="rush_fb"))
+        
+        bot.delete_message(chat_id, message_id)
+        bot.send_photo(chat_id, "https://i.postimg.cc/V6kGbFGw/20261118-210921.jpg", caption="اختر المنصة لرشقها:", reply_markup=markup)
+        return
+        
     for key, prod in PRODUCTS.items():
         if prod["category"] == category:
             text = f"{prod['name']} — {prod['price']}$ ({prod['stock']})"
             markup.add(types.InlineKeyboardButton(text=text, callback_data=f"buy:{key}"))
+            
     markup.add(types.InlineKeyboardButton("🔙 رجوع للأقسام", callback_data="back_main"))
     bot.edit_message_text("اختر المنتج اللي تبيه:", chat_id, message_id, reply_markup=markup)
 
@@ -197,6 +214,37 @@ def handle_buy(call):
         reply_markup=markup
     )
 
+# --- أزرار الرشق ---
+@bot.callback_query_handler(func=lambda call: call.data.startswith('rush_'))
+def handle_rush(call):
+    platform = call.data.split('_')[1]
+    
+    # روابط الصور
+    rush_images = {
+        "tiktok": "https://i.postimg.cc/V6kGbFGw/20261118-210921.jpg",
+        "insta": "https://i.postimg.cc/FKHF1M4k/20261118-212111.jpg",
+        "wa": "https://i.postimg.cc/pTnHFxck/20261118-212035.jpg",
+        "tg": "https://i.postimg.cc/hPnBfkLr/20261118-212014.jpg",
+        "fb": "https://i.postimg.cc/qB3Jtc92/20261118-212051.jpg"
+    }
+    
+    names = {
+        "tiktok": "تيك توك", "insta": "انستجرام", "wa": "واتساب", 
+        "tg": "تليجرام", "fb": "فيسبوك"
+    }
+    
+    bot.answer_callback_query(call.id)
+    
+    # حذف رسالة الصورة السابقة لإرسال الصورة المحددة
+    bot.delete_message(call.message.chat.id, call.message.message_id)
+    
+    # إرسال الصورة مع نص الطلب
+    bot.send_photo(
+        call.message.chat.id,
+        rush_images.get(platform, rush_images["tiktok"]),
+        caption=f"اخترت: رشق {names.get(platform, platform)}\n\nلإتمام الطلب، تواصل مع المالك مباشرة:\n👤 @Hanialakhali"
+    )
+
 @bot.callback_query_handler(func=lambda call: call.data == "contact_owner")
 def handle_contact_owner(call):
     bot.answer_callback_query(call.id)
@@ -228,11 +276,10 @@ def show_stats(message):
         
         for uid in users:
             try:
-                # إرسال رسالة صامتة (نقطة) عشان نتأكد إذا الشخص حظر البوت أو لا
                 bot.send_message(uid, ".", disable_notification=True)
                 active_count += 1
             except Exception:
-                pass # الشخص حاظر أو حاذف البوت
+                pass
                 
         bot.reply_to(message, f"📊 العدد الحقيقي للمستخدمين النشطين: {active_count}")
     else:
