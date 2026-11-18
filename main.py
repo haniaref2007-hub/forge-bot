@@ -167,6 +167,9 @@ def show_category(chat_id, message_id, category):
         markup.add(types.InlineKeyboardButton("رشق تليجرام", callback_data="rush_tg"))
         markup.add(types.InlineKeyboardButton("رشق فيسبوك", callback_data="rush_fb"))
         
+        # زر الرجوع للقائمة الرئيسية
+        markup.add(types.InlineKeyboardButton("🔙 رجوع للقائمة الرئيسية", callback_data="back_main"))
+        
         bot.delete_message(chat_id, message_id)
         bot.send_photo(chat_id, "https://i.postimg.cc/V6kGbFGw/20261118-210921.jpg", caption="اختر المنصة لرشقها:", reply_markup=markup)
         return
@@ -208,6 +211,9 @@ def handle_buy(call):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("💵 شراء (تواصل مع المالك)", callback_data="contact_owner"))
     markup.add(types.InlineKeyboardButton("🔄 تبادل (ببجي / بيس)", callback_data="trade"))
+    # زر الرجوع للقسم اللي كان فيه
+    markup.add(types.InlineKeyboardButton("🔙 رجوع", callback_data="back_main")) 
+    
     bot.send_message(
         call.message.chat.id,
         f"اخترت: {product['name']}\nالسعر: {product['price']}$\n\nهل تبغى تشتري هذا المنتج، أو تتبادله؟",
@@ -258,6 +264,9 @@ def handle_trade(call):
     markup = types.InlineKeyboardMarkup()
     markup.add(types.InlineKeyboardButton("🎮 ببجي (PUBG)", callback_data="trade_pubg"))
     markup.add(types.InlineKeyboardButton("⚽ بيس (PES)", callback_data="trade_pes"))
+    # إضافة زر الرجوع هنا
+    markup.add(types.InlineKeyboardButton("🔙 رجوع للقائمة الرئيسية", callback_data="back_main"))
+    
     bot.edit_message_text("اختر اللعبة اللي تبغى تتبادل مقابلها:", call.message.chat.id, call.message.message_id, reply_markup=markup)
 
 @bot.callback_query_handler(func=lambda call: call.data == "trade_pubg")
